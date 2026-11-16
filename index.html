@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Type play</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平滑轮廓侵蚀核心 - 效果生成器</title>
+    <style>
+        :root {
+            --bg: #d4d5d0; 
+            --panel: #ffffff;
+            --text: #18181b;
+            --border: #e4e4e7;
+            --accent: #000000;
+        }
+
+/* 全局盒模型与排版 */
+html { box-sizing: border-box; }
+*, *:before, *:after { box-sizing: inherit; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0; 
+    display: flex;
+    align-items: stretch;     
+    height: 100vh; 
+    overflow: hidden; 
+}
+
+/* 左侧面板布局 */
+.controls {
+    background: var(--panel);
+    padding: 25px;
+    width: 100%;
+    max-width: 330px; 
+    flex-shrink: 0; 
+    border: none; 
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column; 
+}
+
+/* 右侧画布布局 */
+.canvas-area {
+    flex: 1; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow: auto; 
+}
+
+canvas {
+    background: #ffffff;
+    max-width: 100%;
+    max-height: 100%;
+    border: none; 
+    display: block;
+    cursor: default; 
+}
+
+.control-group { margin-bottom: 14px; width: 100%; }
+
+.control-group label, .control-group .group-title {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem; 
+    font-weight: 600;
+    margin-bottom: 6px; 
+    color: #3f3f46;
+}
+
+/* 统一的滑块样式 */
+input[type="range"] { 
+    -webkit-appearance: none; 
+    appearance: none;
+    width: 100%; 
+    cursor: pointer; 
+    background: transparent; 
+    margin: 4px 0; 
+    outline: none;
+    --range-progress: 50%; 
+}
+input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px; 
+    background: linear-gradient(to right, var(--accent) var(--range-progress, 0%), var(--border) var(--range-progress, 0%));
+    border-radius: 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 14px; 
+    width: 14px;  
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    margin-top: -5px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+}
+input[type="range"]::-moz-range-progress {
+    background: var(--accent);
+    height: 4px;
+    border-radius: 2px;
+}
+input[type="range"]::-moz-range-thumb {
+    height: 14px; 
+    width: 14px;  
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* 自定义取色器 */
+.color-input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 0; 
+    overflow: hidden;
+    background: #ffffff;
+    height: 20px; 
+    width: 100%;
+}
+.color-input-wrapper input[type="color"] { 
+    -webkit-appearance: none; 
+    width: 24px; 
+    height: 100%; 
+    cursor: pointer; 
+    border: none; 
+    padding: 0; 
+    background: none; 
+}
+.color-input-wrapper input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.color-input-wrapper input[type="color"]::-webkit-color-swatch { 
+    border: none; 
+    border-right: 1px solid var(--border); 
+    border-radius: 0; 
+}
+.color-input-wrapper input[type="text"] {
+    flex: 1;
+    width: 100%; 
+    height: 100%; 
+    margin: 0;
+    border: none;
+    outline: none;
+    padding: 0; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.75rem; 
+    font-weight: 500; 
+    letter-spacing: 0.5px; 
+    color: var(--accent); 
+    background: transparent;
+    text-align: center; 
+    line-height: 18px; 
+    min-width: 0;
+}
+
+.circle-color {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px; 
+    height: 18px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    background: transparent;
+    outline: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.circle-color::-webkit-color-swatch-wrapper { padding: 0; }
+.circle-color::-webkit-color-swatch { border: none; border-radius: 50%; }
+.circle-color::-moz-color-swatch { border: none; border-radius: 50%; }
+
+button, .upload-btn {
+    display: block; width: 100%; background: var(--accent); color: white;
+    border: none; padding: 12px; font-weight: 600; font-size: 0.9rem; 
+    cursor: pointer; text-align: center; margin-top: 10px; margin-bottom: 16px; transition: 0.2s;
+}
+
+button:not(#btnRandomColor):hover, .upload-btn:hover { 
+    background: #27272a !important; 
+    color: #ffffff !important; 
+}
+button:disabled {
+    opacity: 1; cursor: wait; /* 透明度设为1保持原本黑色外观，并显示等待光标 */
+}
+
+input[type="file"] { display: none; }
+.val { color: var(--accent); font-family: -apple-system, BlinkMacSystemFont, monospace; font-size: 0.9rem; font-weight: 600;}
+
+/* 预览图框 */
+.preview-box {
+    width: 100%;
+    height: 120px; 
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000000; 
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.preview-box img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+#clearImg {
+    position: absolute;
+    right: 16px; 
+    cursor: pointer;
+    color: #9ca3af; 
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 300; 
+    font-size: 1.2rem;
+    line-height: 1;
+    transition: color 0.1s;
+    padding: 4px;
+}
+#clearImg:hover { 
+    color: #d1d5db; 
+}
+
+.export-wrapper {
+    margin-top: auto; 
+    padding-top: 10px;
+}
+.export-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #3f3f46;
+    margin-bottom: 8px;
+}
+.download-group {
+    display: grid; 
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px; 
+}
+.download-group button { margin-top: 0; font-weight: 400; margin-bottom: 0;}
+</style>
+</head>
+<body>
+<!-- UI控制面板 -->
+<div class="controls">
+    <!-- 图像预览框 -->
+    <div class="preview-box" id="previewBox">
+        <span id="previewText" style="color: #a1a1aa; font-size: 0.9rem; font-weight: 600;">Image Preview</span>
+        <img id="previewImg" alt="Image Preview" style="display: none;">
+    </div>
+
+    <!-- 上传按钮框 -->
+    <label class="upload-btn" style="position: relative; display: flex; justify-content: center; align-items: center; gap: 8px;">
+        <span id="uploadText">上传图片 Upload</span>
+        <span id="fileName" style="display: none;"></span>
+        <span id="clearImg" style="display: none;" title="取消当前图片">X</span>
+        <input type="file" id="imageUpload" accept="image/*">
+    </label>
+
+    <!-- 自定义色彩控制 -->
+    <div class="control-group">
+        <div class="group-title">
+            <span>颜色设置 (Colors)</span>
+            <div style="display: flex; align-items: center; gap: 6px; font-weight: normal;">
+                <span style="font-size: 0.75rem; color: #71717a;">背景 BG</span>
+                <input type="color" id="colorBg" value="#ffffff" class="circle-color" title="更改画布背景色">
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; width: 100%;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                <span style="font-size: 0.75rem; color: #71717a;">图形 Core</span>
+                <div class="color-input-wrapper">
+                    <input type="color" id="colorCore" value="#4646ff">
+                    <input type="text" id="colorCoreText" value="#4646FF" maxlength="7">
+                </div>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                <span style="font-size: 0.75rem; color: #71717a;">轮廓 Border</span>
+                <div class="color-input-wrapper">
+                    <input type="color" id="colorBorder" value="#111111">
+                    <input type="text" id="colorBorderText" value="#111111" maxlength="7">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 侵蚀与膨胀引擎效果滑块组 -->
+    <div class="control-group">
+        <label><span>图形阀值 (Threshold)</span> <span class="val" id="v_graphicThresh">128</span></label>
+        <input type="range" id="graphicThresh" min="0" max="255" value="128">
+    </div>
+
+    <div class="control-group">
+        <label><span>图形膨胀效果 (Blur Effect)</span> <span class="val" id="v_blurAmount">5</span></label>
+        <input type="range" id="blurAmount" min="2" max="60" value="5">
+    </div>
+    
+    <div class="control-group">
+        <label><span>外部轮廓大小 (Outer Thresh)</span> <span class="val" id="v_outerThresh">200</span></label>
+        <input type="range" id="outerThresh" min="20" max="230" value="200">
+    </div>
+    
+    <div class="control-group">
+        <label><span>内部核心大小 (Inner Thresh)</span> <span class="val" id="v_innerThresh">50</span></label>
+        <input type="range" id="innerThresh" min="20" max="230" value="50">
+    </div>
+    
+    <div class="control-group">
+        <label><span>核心侵蚀颗粒 (Erosion Scale)</span> <span class="val" id="v_erosionScale">5</span></label>
+        <input type="range" id="erosionScale" min="1" max="15" value="5">
+    </div>
+    
+    <div class="control-group">
+        <label><span>核心侵蚀强度 (Erosion Strength)</span> <span class="val" id="v_erosionStrength">100</span></label>
+        <input type="range" id="erosionStrength" min="0" max="255" value="100">
+    </div>
+
+    <!-- 下载与色彩随机组 -->
+    <div class="export-wrapper">
+        <div class="export-title">Export 导出</div>
+        <div class="download-group">
+            <button id="btnJpg">JPG</button>
+            <button id="btnPng">PNG</button> 
+            <button id="btnSvg">SVG</button>
+            <button id="btnRandomColor" title="开启随机色彩模式" style="grid-column: 1 / -1; background: #e4e4e7; color: #18181b; font-size: 0.9rem; font-weight: 500; padding: 10px 0;">随机色彩 Random Color</button>
+        </div>
+    </div>
+</div>
+
+<div class="canvas-area">
+    <canvas id="mainCanvas" width="600" height="800"></canvas>
+</div>
+
+<script>
+    const DOM = {
+        graphicThresh: document.getElementById('graphicThresh'),
+        blurAmount: document.getElementById('blurAmount'),
+        outerThresh: document.getElementById('outerThresh'),
+        innerThresh: document.getElementById('innerThresh'),
+        erosionScale: document.getElementById('erosionScale'),
+        erosionStrength: document.getElementById('erosionStrength'),
+        colorBg: document.getElementById('colorBg'),
+        colorCore: document.getElementById('colorCore'),
+        colorBorder: document.getElementById('colorBorder'),
+        colorCoreText: document.getElementById('colorCoreText'),
+        colorBorderText: document.getElementById('colorBorderText'),
+        
+        previewBox: document.getElementById('previewBox'),
+        previewText: document.getElementById('previewText'),
+        previewImg: document.getElementById('previewImg'),
+        uploadText: document.getElementById('uploadText'),
+        fileName: document.getElementById('fileName'),
+        clearImg: document.getElementById('clearImg'),
+        canvas: document.getElementById('mainCanvas'),
+        imageUpload: document.getElementById('imageUpload'),
+        btnJpg: document.getElementById('btnJpg'),
+        btnPng: document.getElementById('btnPng'),
+        btnSvg: document.getElementById('btnSvg'),
+        btnRandomColor: document.getElementById('btnRandomColor')
+    };
+
+    const canvas = DOM.canvas;
+    const ctx = canvas.getContext('2d');
+    let originalImage = new Image();
+    
+    // 初始化默认画布
+    ctx.fillStyle = DOM.colorBg.value;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // =============================
+    // UI 控制部分逻辑
+    // =============================
+
+    function updateRangeProgress(el) {
+        const min = parseFloat(el.min) || 0;
+        const max = parseFloat(el.max) || 100;
+        const val = parseFloat(el.value);
+        const percent = ((val - min) / (max - min)) * 100;
+        el.style.setProperty('--range-progress', percent + '%');
+    }
+
+    // 绑定并同步所有的滑块属性
+    ['graphicThresh', 'blurAmount', 'outerThresh', 'innerThresh', 'erosionScale', 'erosionStrength'].forEach(id => {
+        const el = DOM[id];
+        updateRangeProgress(el);
+        
+        el.addEventListener('input', (e) => {
+            updateRangeProgress(e.target);
+            document.getElementById('v_' + id).innerText = e.target.value;
+            if(originalImage.src) {
+                clearTimeout(window.renderTimeout);
+                window.renderTimeout = setTimeout(renderEffect, 20);
+            }
+        });
+    });
+
+    // 颜色同步逻辑
+    function handleColorInput(colorEl, textEl) {
+        textEl.value = colorEl.value.toUpperCase();
+        if(originalImage.src) {
+            clearTimeout(window.renderTimeout);
+            window.renderTimeout = setTimeout(renderEffect, 20);
+        } else if (colorEl.id === 'colorBg') {
+            ctx.fillStyle = colorEl.value;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+    
+    function handleTextInput(textEl, colorEl) {
+        let val = textEl.value.trim();
+        if(!val.startsWith('#')) val = '#' + val;
+        if (/^#[0-9A-F]{6}$/i.test(val)) {
+            colorEl.value = val;
+            if(originalImage.src) {
+                clearTimeout(window.renderTimeout);
+                window.renderTimeout = setTimeout(renderEffect, 20);
+            } else if (colorEl.id === 'colorBg') {
+                ctx.fillStyle = colorEl.value;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+    }
+
+    DOM.colorCore.addEventListener('input', () => handleColorInput(DOM.colorCore, DOM.colorCoreText));
+    DOM.colorBorder.addEventListener('input', () => handleColorInput(DOM.colorBorder, DOM.colorBorderText));
+    DOM.colorCoreText.addEventListener('input', () => handleTextInput(DOM.colorCoreText, DOM.colorCore));
+    DOM.colorBorderText.addEventListener('input', () => handleTextInput(DOM.colorBorderText, DOM.colorBorder));
+
+    DOM.colorBg.addEventListener('input', (e) => {
+        if(originalImage.src) {
+            clearTimeout(window.renderTimeout);
+            window.renderTimeout = setTimeout(renderEffect, 20);
+        } else {
+            ctx.fillStyle = e.target.value;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    });
+
+    // 图片上传触发器
+    DOM.imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        let nameStr = file.name;
+        const dotIdx = nameStr.lastIndexOf('.');
+        if (dotIdx !== -1) nameStr = nameStr.substring(0, dotIdx);
+        if (nameStr.length > 8) nameStr = nameStr.substring(0, 8) + '...';
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            originalImage.onload = () => { 
+                DOM.previewBox.style.background = getSubjectColor(originalImage);
+                DOM.previewBox.style.display = 'flex';
+                DOM.previewText.style.display = 'none'; 
+                DOM.previewImg.style.display = 'block';
+                DOM.previewImg.src = event.target.result;
+                
+                DOM.uploadText.style.display = 'none';
+                DOM.fileName.innerText = nameStr;
+                DOM.fileName.style.display = 'inline';
+                DOM.clearImg.style.display = 'block'; 
+
+                renderEffect(); 
+            };
+            originalImage.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // 清除图像按钮
+    DOM.clearImg.addEventListener('click', (e) => {
+        e.preventDefault(); 
+        e.stopPropagation();
+        
+        originalImage.removeAttribute('src');
+        DOM.imageUpload.value = ''; 
+        window.currentPaths = null;
+        
+        DOM.previewBox.style.background = '#000000';
+        DOM.previewImg.style.display = 'none';
+        DOM.previewImg.src = '';
+        DOM.previewText.style.display = 'block';
+        
+        DOM.fileName.style.display = 'none';
+        DOM.clearImg.style.display = 'none';
+        DOM.uploadText.style.display = 'inline';
+        
+        ctx.fillStyle = DOM.colorBg.value || '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        clearTimeout(window.renderTimeout);
+    });
+
+    // 下载触发绑定
+    DOM.btnJpg.addEventListener('click', () => downloadImage('jpg'));
+    DOM.btnPng.addEventListener('click', () => downloadImage('png'));
+    DOM.btnSvg.addEventListener('click', () => downloadImage('svg'));
+
+    // =============================
+    // 效果生成核心引擎 
+    // (提取算法完全移至实时预览端以保证真正的所见即所得 100% WYSIWYG)
+    // =============================
+
+    function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+    function hexToRgb(hex) {
+        const match = hex.replace('#','').match(/.{1,2}/g);
+        return [parseInt(match[0],16), parseInt(match[1],16), parseInt(match[2],16)];
+    }
+
+    // 智能提取图像的主体色彩
+    function getSubjectColor(imgElement) {
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        const size = 64; 
+        tempCanvas.width = size;
+        tempCanvas.height = size;
+        tempCtx.drawImage(imgElement, 0, 0, size, size);
+        
+        const data = tempCtx.getImageData(0, 0, size, size).data;
+        const colorCounts = {};
+        const edgeCounts = {};
+        let maxEdgeCount = 0;
+        let bgKey = '';
+
+        const quantize = (c) => Math.round(c / 16) * 16;
+        const getKey = (r, g, b) => `${quantize(r)},${quantize(g)},${quantize(b)}`;
+
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                if (x === 0 || x === size - 1 || y === 0 || y === size - 1) {
+                    const i = (y * size + x) * 4;
+                    if (data[i + 3] < 128) continue; 
+                    const key = getKey(data[i], data[i+1], data[i+2]);
+                    edgeCounts[key] = (edgeCounts[key] || 0) + 1;
+                    if (edgeCounts[key] > maxEdgeCount) {
+                        maxEdgeCount = edgeCounts[key];
+                        bgKey = key;
+                    }
+                }
+            }
+        }
+
+        const colorDist = (k1, r, g, b) => {
+            if (!k1) return 999;
+            const p1 = k1.split(',').map(Number);
+            return Math.abs(p1[0]-r) + Math.abs(p1[1]-g) + Math.abs(p1[2]-b);
+        };
+
+        let maxSubjectCount = 0;
+        let subjectColor = '';
+        let fallbackMaxCount = 0;
+        let fallbackColor = '#000000';
+
+        for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] < 128) continue;
+            const r = data[i], g = data[i+1], b = data[i+2];
+            const key = getKey(r, g, b);
+
+            colorCounts[key] = (colorCounts[key] || 0) + 1;
+            if (colorCounts[key] > fallbackMaxCount) {
+                fallbackMaxCount = colorCounts[key];
+                fallbackColor = `rgb(${quantize(r)}, ${quantize(g)}, ${quantize(b)})`;
+            }
+
+            if (bgKey && colorDist(bgKey, r, g, b) < 60) continue;
+
+            if (colorCounts[key] > maxSubjectCount) {
+                maxSubjectCount = colorCounts[key];
+                subjectColor = `rgb(${quantize(r)}, ${quantize(g)}, ${quantize(b)})`;
+            }
+        }
+        
+        return subjectColor || fallbackColor || '#000000';
+    }
+
+    DOM.btnRandomColor.addEventListener('click', () => {
+        function hslToHex(h, s, l) {
+            l /= 100;
+            const a = s * Math.min(l, 1 - l) / 100;
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
+        }
+
+        const baseHue = Math.floor(Math.random() * 360);
+        const contrastHue = (baseHue + 180 + Math.floor(Math.random() * 40 - 20)) % 360;
+
+        const bgHex = hslToHex(baseHue, Math.floor(Math.random() * 30 + 70), Math.floor(Math.random() * 30 + 40));
+        const coreHex = hslToHex(contrastHue, Math.floor(Math.random() * 30 + 70), Math.floor(Math.random() * 30 + 40));
+        
+        const isDark = Math.random() > 0.5;
+        const borderHex = hslToHex(
+            (baseHue + 90) % 360, 
+            Math.floor(Math.random() * 40 + 30), 
+            isDark ? Math.floor(Math.random() * 10 + 5) : Math.floor(Math.random() * 10 + 85)
+        );
+
+        DOM.colorBg.value = bgHex;
+        DOM.colorCore.value = coreHex;
+        DOM.colorBorder.value = borderHex;
+
+        DOM.colorCoreText.value = coreHex.toUpperCase();
+        DOM.colorBorderText.value = borderHex.toUpperCase();
+
+        if(originalImage.src) {
+            clearTimeout(window.renderTimeout);
+            window.renderTimeout = setTimeout(renderEffect, 20);
+        } else {
+            ctx.fillStyle = bgHex;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    });
+
+    // 统一处理图像并返回距离场数据，省去原先在Canvas绘图的大量耗时操作
+    function processCanvasEffect() {
+        const targetWidth = canvas.width;
+        const targetHeight = canvas.height;
+
+        const tempBlur = document.createElement('canvas');
+        const tempNoise = document.createElement('canvas');
+        tempBlur.width = targetWidth; tempBlur.height = targetHeight;
+        tempNoise.width = targetWidth; tempNoise.height = targetHeight;
+        
+        const tempCtxBlur = tempBlur.getContext('2d', { willReadFrequently: true });
+        const tempCtxNoise = tempNoise.getContext('2d', { willReadFrequently: true });
+        
+        tempCtxBlur.fillStyle = 'white'; 
+        tempCtxBlur.fillRect(0, 0, targetWidth, targetHeight);
+        
+        const imgScale = Math.min(targetWidth / originalImage.width, targetHeight / originalImage.height);
+        const drawW = Math.max(1, Math.round(originalImage.width * imgScale));
+        const drawH = Math.max(1, Math.round(originalImage.height * imgScale));
+        const drawX = (targetWidth - drawW) / 2;
+        const drawY = (targetHeight - drawH) / 2;
+        tempCtxBlur.drawImage(originalImage, drawX, drawY, drawW, drawH);
+        
+        const baseData = tempCtxBlur.getImageData(0, 0, targetWidth, targetHeight).data;
+        const size = targetWidth * targetHeight;
+        
+        // --- Meijster算法计算精确欧几里得距离场 (EDT) ---
+        const grid = new Float32Array(size);
+        const gThresh = parseInt(DOM.graphicThresh.value);
+        for (let i = 0; i < size; i++) {
+            let idx = i * 4;
+            let r = baseData[idx], g = baseData[idx+1], b = baseData[idx+2], a = baseData[idx+3];
+            let luma = r * 0.299 + g * 0.587 + b * 0.114;
+            grid[i] = (a < 128 || luma > gThresh) ? 1e9 : 0;
+        }
+
+        const maxDim = Math.max(targetWidth, targetHeight);
+        const f = new Float32Array(maxDim);
+        const d = new Float32Array(maxDim);
+        const z = new Float32Array(maxDim + 1);
+        const v = new Int32Array(maxDim);
+
+        // 1D EDT 垂直扫描
+        for (let x = 0; x < targetWidth; x++) {
+            for (let y = 0; y < targetHeight; y++) f[y] = grid[y * targetWidth + x];
+            let k = 0; v[0] = 0; z[0] = -1e9; z[1] = 1e9;
+            for (let q = 1; q < targetHeight; q++) {
+                let s;
+                while (true) {
+                    let p = v[k];
+                    s = ((f[q] + q * q) - (f[p] + p * p)) / (2 * q - 2 * p);
+                    if (s <= z[k]) k--; else break;
+                }
+                k++; v[k] = q; z[k] = s; z[k + 1] = 1e9;
+            }
+            k = 0;
+            for (let q = 0; q < targetHeight; q++) {
+                while (z[k + 1] < q) k++;
+                let p = v[k];
+                d[q] = (q - p) * (q - p) + f[p];
+            }
+            for (let y = 0; y < targetHeight; y++) grid[y * targetWidth + x] = d[y];
+        }
+
+        // 1D EDT 水平扫描并求平方根获取精确距离
+        for (let y = 0; y < targetHeight; y++) {
+            for (let x = 0; x < targetWidth; x++) f[x] = grid[y * targetWidth + x];
+            let k = 0; v[0] = 0; z[0] = -1e9; z[1] = 1e9;
+            for (let q = 1; q < targetWidth; q++) {
+                let s;
+                while (true) {
+                    let p = v[k];
+                    s = ((f[q] + q * q) - (f[p] + p * p)) / (2 * q - 2 * p);
+                    if (s <= z[k]) k--; else break;
+                }
+                k++; v[k] = q; z[k] = s; z[k + 1] = 1e9;
+            }
+            k = 0;
+            for (let q = 0; q < targetWidth; q++) {
+                while (z[k + 1] < q) k++;
+                let p = v[k];
+                d[q] = (q - p) * (q - p) + f[p];
+            }
+            for (let x = 0; x < targetWidth; x++) {
+                grid[y * targetWidth + x] = Math.sqrt(d[x]);
+            }
+        }
+
+        let factor = 200 / Math.max(0.1, DOM.blurAmount.value);
+        
+        for (let i = 0; i < size; i++) {
+            let val = Math.min(255, grid[i] * factor);
+            let idx = i * 4;
+            baseData[idx] = val;
+            baseData[idx+1] = val;
+            baseData[idx+2] = val;
+            baseData[idx+3] = 255;
+        }
+
+        // 生成噪点/侵蚀遮罩
+        const nw = Math.max(1, Math.ceil(canvas.width / parseInt(DOM.erosionScale.value)));
+        const nh = Math.max(1, Math.ceil(canvas.height / parseInt(DOM.erosionScale.value)));
+        
+        const smallCanvas = document.createElement('canvas');
+        smallCanvas.width = nw; smallCanvas.height = nh;
+        const sCtx = smallCanvas.getContext('2d');
+        const sData = sCtx.createImageData(nw, nh);
+
+        let seed = 12345;
+        for(let i = 0; i < sData.data.length; i += 4) {
+            let x = Math.sin(seed++) * 10000;
+            let val = (x - Math.floor(x)) * 255;
+            sData.data[i] = sData.data[i+1] = sData.data[i+2] = val;
+            sData.data[i+3] = 255;
+        }
+        sCtx.putImageData(sData, 0, 0);
+
+        // 将相同网格的噪点图像通过原生抗锯齿平滑放大到实际宽高
+        tempCtxNoise.imageSmoothingEnabled = true;
+        tempCtxNoise.imageSmoothingQuality = 'high';
+        tempCtxNoise.drawImage(smallCanvas, 0, 0, targetWidth, targetHeight);
+        const noiseData = tempCtxNoise.getImageData(0, 0, targetWidth, targetHeight).data;
+
+        return { baseData, noiseData, width: targetWidth, height: targetHeight };
+    }
+
+    // 采用 Marching Squares 追踪像素边界并转换为亚像素级平滑的SVG闭合路径
+    function traceSVGPaths(W, H, getVal, threshold) {
+        const W_vis = W + 2;
+        const H_vis = H + 2;
+        const visited = new Uint8Array(W_vis * H_vis);
+        const dArray = [];
+        
+        const getSegments = (x, y) => {
+            let v00 = getVal(x, y);
+            let v10 = getVal(x+1, y);
+            let v11 = getVal(x+1, y+1);
+            let v01 = getVal(x, y+1);
+            
+            let idx = 0;
+            if (v00 <= threshold) idx |= 1;
+            if (v10 <= threshold) idx |= 2;
+            if (v11 <= threshold) idx |= 4;
+            if (v01 <= threshold) idx |= 8;
+            
+            if (idx === 0 || idx === 15) return [];
+            
+            if (idx === 5) {
+                let center = (v00 + v10 + v11 + v01) / 4;
+                if (center <= threshold) return [[0, 1], [2, 3]];
+                else return [[0, 3], [2, 1]];
+            }
+            if (idx === 10) {
+                let center = (v00 + v10 + v11 + v01) / 4;
+                if (center <= threshold) return [[1, 2], [3, 0]];
+                else return [[1, 0], [3, 2]];
+            }
+            
+            const routes = [
+                [], [[0, 3]], [[1, 0]], [[1, 3]], 
+                [[2, 1]], [], [[2, 0]], [[2, 3]], 
+                [[3, 2]], [[0, 2]], [], [[1, 2]], 
+                [[3, 1]], [[0, 1]], [[3, 0]], []
+            ];
+            return routes[idx];
+        };
+        
+        const getPoint = (x, y, edge) => {
+            const interp = (v1, v2) => (v1 === v2) ? 0.5 : (threshold - v1) / (v2 - v1);
+            if (edge === 0) return [x + interp(getVal(x,y), getVal(x+1,y)), y];
+            if (edge === 1) return [x + 1, y + interp(getVal(x+1,y), getVal(x+1,y+1))];
+            if (edge === 2) return [x + interp(getVal(x,y+1), getVal(x+1,y+1)), y + 1];
+            if (edge === 3) return [x, y + interp(getVal(x,y), getVal(x,y+1))];
+        };
+
+        for (let y = -1; y <= H; y++) {
+            for (let x = -1; x <= W; x++) {
+                let segs = getSegments(x, y);
+                for (let s = 0; s < segs.length; s++) {
+                    let vIdx = (y + 1) * W_vis + (x + 1);
+                    if (visited[vIdx] & (1 << s)) continue;
+                    
+                    let cx = x, cy = y, cSegIdx = s;
+                    let pathPts = [];
+                    
+                    while (true) {
+                        let cVIdx = (cy + 1) * W_vis + (cx + 1);
+                        visited[cVIdx] |= (1 << cSegIdx);
+                        let seg = getSegments(cx, cy)[cSegIdx];
+                        let outEdge = seg[1];
+                        
+                        let pt = getPoint(cx, cy, outEdge);
+                        pathPts.push(`${pt[0].toFixed(1)},${pt[1].toFixed(1)}`);
+                        
+                        if (outEdge === 0) cy -= 1;
+                        else if (outEdge === 1) cx += 1;
+                        else if (outEdge === 2) cy += 1;
+                        else if (outEdge === 3) cx -= 1;
+                        
+                        if (cx < -1 || cx > W || cy < -1 || cy > H) break;
+                        
+                        let inEdge = (outEdge + 2) % 4;
+                        let nextSegs = getSegments(cx, cy);
+                        cSegIdx = -1;
+                        for (let i = 0; i < nextSegs.length; i++) {
+                            if (nextSegs[i][0] === inEdge) {
+                                cSegIdx = i;
+                                break;
+                            }
+                        }
+                        
+                        if (cSegIdx === -1) break;
+                        let nextVIdx = (cy + 1) * W_vis + (cx + 1);
+                        if (visited[nextVIdx] & (1 << cSegIdx)) break;
+                    }
+                    if (pathPts.length > 0) {
+                        dArray.push(`M${pathPts[0]} L${pathPts.slice(1).join(' L')} Z`);
+                    }
+                }
+            }
+        }
+        return dArray.join(' ');
+    }
+
+    // 全局缓存路径以供下载复用，确保所见即所得
+    window.currentPaths = null;
+
+    function renderEffect() {
+        if (!originalImage.src) return;
+        
+        // 生成距离场和噪点数据
+        const data = processCanvasEffect();
+        const W = data.width;
+        const H = data.height;
+        
+        const eStrength = parseInt(DOM.erosionStrength.value) / 100;
+        const outThresh = parseInt(DOM.outerThresh.value);
+        const inThresh = parseInt(DOM.innerThresh.value);
+
+        const getBorderVal = (x, y) => {
+            if (x < 0 || x >= W || y < 0 || y >= H) return 1e9;
+            return data.baseData[(y * W + x) * 4];
+        };
+
+        const getCoreVal = (x, y) => {
+            if (x < 0 || x >= W || y < 0 || y >= H) return 1e9;
+            let i = (y * W + x) * 4;
+            return data.baseData[i] + (data.noiseData[i] - 128) * eStrength;
+        };
+
+        // 直接追踪矢量路径
+        const borderPathStr = traceSVGPaths(W, H, getBorderVal, outThresh);
+        const corePathStr = traceSVGPaths(W, H, getCoreVal, inThresh);
+        
+        window.currentPaths = { borderPath: borderPathStr, corePath: corePathStr };
+
+        // 渲染到画布 - 完全使用和导出相同的原生矢量渲染方式
+        ctx.fillStyle = DOM.colorBg.value;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (borderPathStr) {
+            const pBorder = new Path2D(borderPathStr);
+            ctx.fillStyle = DOM.colorBorder.value;
+            ctx.fill(pBorder, 'evenodd');
+        }
+
+        if (corePathStr) {
+            const pCore = new Path2D(corePathStr);
+            ctx.fillStyle = DOM.colorCore.value;
+            ctx.fill(pCore, 'evenodd');
+        }
+    }
+
+    function downloadImage(format) {
+        if(!originalImage.src || !window.currentPaths) return alert('请先上传图片');
+        
+        const paths = window.currentPaths;
+        const W = canvas.width;
+        const H = canvas.height;
+        const isTransparent = (format === 'png');
+
+        // PNG 保持透明，SVG和JPG需要设置背景板
+        const bgRect = isTransparent ? '' : `<rect width="100%" height="100%" fill="${DOM.colorBg.value}" />`;
+
+        // 基于当前生成的相同路径，创建精确矢量化 SVG
+        // 这一步确保不管什么格式输出，均来源于唯一准确的视觉路径映射（所见即所得）
+        const createSvgString = (targetW, targetH) => {
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${targetW}" height="${targetH}">
+                ${bgRect}
+                ${paths.borderPath ? `<path d="${paths.borderPath}" fill="${DOM.colorBorder.value}" fill-rule="evenodd" />` : ''}
+                ${paths.corePath ? `<path d="${paths.corePath}" fill="${DOM.colorCore.value}" fill-rule="evenodd" />` : ''}
+            </svg>`;
+        };
+
+        // SVG格式：无需多余文本等待，即点即存
+        if (format === 'svg') {
+            const svgString = createSvgString(W, H);
+            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const a = document.createElement('a');
+            a.download = `art_blob_${Date.now()}.svg`;
+            a.href = URL.createObjectURL(blob);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); }, 100);
+            return;
+        }
+        
+        // 位图格式：为了防止用户连击引发崩溃，暂时禁用对应按钮
+        const btnId = format === 'jpg' ? 'btnJpg' : 'btnPng';
+        const btn = DOM[btnId];
+        btn.disabled = true;
+        
+        // 超清 A3 可印刷分辨率基准放大（短边 3508 像素，约 300 DPI）
+        const A3_SHORT = 3508;
+        let exportW, exportH;
+        if (canvas.width <= canvas.height) {
+            exportW = A3_SHORT;
+            exportH = Math.round(exportW * (canvas.height / canvas.width));
+        } else {
+            exportH = A3_SHORT;
+            exportW = Math.round(exportH * (canvas.width / canvas.height));
+        }
+
+        // 用原生矢量渲染高分辨率图片以完美保证抗锯齿不产生撕裂
+        const svgString = createSvgString(exportW, exportH);
+        const img = new Image();
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = exportW;
+            exportCanvas.height = exportH;
+            const exportCtx = exportCanvas.getContext('2d');
+
+            if (format === 'jpg') {
+                exportCtx.fillStyle = DOM.colorBg.value;
+                exportCtx.fillRect(0, 0, exportW, exportH);
+            }
+
+            exportCtx.drawImage(img, 0, 0);
+
+            const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
+            exportCanvas.toBlob((blob) => {
+                const a = document.createElement('a');
+                a.download = `art_blob_${Date.now()}.${format}`;
+                a.href = URL.createObjectURL(blob);
+                a.click();
+                
+                URL.revokeObjectURL(a.href);
+                URL.revokeObjectURL(url);
+                btn.disabled = false;
+            }, mimeType, format === 'jpg' ? 1.0 : undefined);
+        };
+
+        img.onerror = () => {
+            alert("导出异常/Export Error");
+            URL.revokeObjectURL(url);
+            btn.disabled = false;
+        };
+
+        img.src = url;
+    }
+</script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
